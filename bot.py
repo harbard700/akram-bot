@@ -5,7 +5,7 @@ import re
 import threading
 
 # 🔑 التوكن من متغيرات البيئة (آمن)
-TOKEN = os.environ.get("BOT_TOKEN")
+TOKEN = os.environ.get("BOT-TOKEN")
 if not TOKEN:
     raise Exception("BOT_TOKEN is not set in environment variables!")
 
