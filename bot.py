@@ -4,44 +4,100 @@ import os
 import re
 import threading
 
-TOKEN = os.environ.get("BOT_TOKEN", "8778509203:AAEiqi4z2fvNYVB20QFsy3qGygT4oetbWwM")
+# 🔑 التوكن من متغيرات البيئة (آمن)
+TOKEN = os.environ.get("BOT_TOKEN")
+if not TOKEN:
+    raise Exception("BOT_TOKEN is not set in environment variables!")
+
 bot = telebot.TeleBot(TOKEN)
-bot.remove_webhook()
+bot.remove_webhook()  # حذف الـ Webhook إن وجد
 
 DOWNLOAD_FOLDER = "downloads"
 os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
-    bot.reply_to(message, f"🎬 **مرحباً بك في بوت اكرم!**\n👤 أهلاً بك يا {message.from_user.first_name}!\n📥 أرسل الرابط وسأحمله لك.")
+    user_name = message.from_user.first_name
+    welcome_text = f"""
+🎬 **مرحباً بك في بوت اكرم!**
 
-@bot.message_handler(func=lambda m: re.match(r'^https?://', m.text))
+👤 أهلاً بك يا {user_name}!
+
+📥 أرسل الرابط وسأحمله لك.
+
+✅ يدعم جميع المواقع:
+• تيك توك (فيديو وصور)
+• يوتيوب
+• إنستغرام
+• تويتر
+• فيسبوك
+• وكل المواقع الأخرى
+
+🔥 يعمل 24/7 على السيرفر
+"""
+    bot.reply_to(message, welcome_text, parse_mode='Markdown')
+
+@bot.message_handler(func=lambda message: True)
 def download_media(message):
     url = message.text.strip()
-    status = bot.reply_to(message, "⏳ جاري التحميل...")
     
-    def process():
+    if not re.match(r'^https?://', url):
+        bot.reply_to(message, "❌ أرسل رابطاً صحيحاً يبدأ بـ http:// أو https://")
+        return
+    
+    status_msg = bot.reply_to(message, "⏳ جاري التحميل...")
+    
+    def process_download():
         try:
-            ydl_opts = {'format': 'best[ext=mp4]/best', 'outtmpl': f'{DOWNLOAD_FOLDER}/%(title)s.%(ext)s', 'quiet': True}
+            ydl_opts = {
+                'format': 'best[ext=mp4]/best[ext=jpg]/best[ext=png]/best',
+                'outtmpl': f'{DOWNLOAD_FOLDER}/%(title)s.%(ext)s',
+                'quiet': True,
+                'no_warnings': True,
+                'ignoreerrors': True,
+                'extract_flat': False,
+                'socket_timeout': 30,
+                'retries': 5,
+            }
+            
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
-                path = ydl.prepare_filename(info)
-                if not os.path.exists(path):
+                file_path = ydl.prepare_filename(info)
+                
+                if not os.path.exists(file_path):
                     files = os.listdir(DOWNLOAD_FOLDER)
-                    path = os.path.join(DOWNLOAD_FOLDER, files[0]) if files else None
-                if path and os.path.exists(path):
-                    size = os.path.getsize(path) / (1024 * 1024)
-                    bot.edit_message_text(f"✅ **تم التحميل!**\n📁 {os.path.basename(path)}\n📦 {size:.2f} MB", chat_id=message.chat.id, message_id=status.message_id)
-                    with open(path, 'rb') as f:
-                        bot.send_document(message.chat.id, f)
-                    os.remove(path)
-                else:
-                    raise Exception("الملف غير موجود")
+                    if files:
+                        file_path = os.path.join(DOWNLOAD_FOLDER, files[0])
+                    else:
+                        raise Exception("لم يتم العثور على الملف")
+                
+                file_size = os.path.getsize(file_path) / (1024 * 1024)
+                
+                bot.edit_message_text(
+                    f"✅ **تم التحميل!**\n📁 {os.path.basename(file_path)}\n📦 {file_size:.2f} MB",
+                    chat_id=message.chat.id,
+                    message_id=status_msg.message_id,
+                    parse_mode='Markdown'
+                )
+                
+                with open(file_path, 'rb') as f:
+                    bot.send_document(message.chat.id, f)
+                
+                os.remove(file_path)
+                print(f"✅ تم تحميل: {os.path.basename(file_path)}")
+                
         except Exception as e:
-            bot.edit_message_text(f"❌ **خطأ:** {str(e)[:100]}", chat_id=message.chat.id, message_id=status.message_id)
+            error_msg = str(e)
+            print(f"❌ خطأ: {error_msg}")
+            bot.edit_message_text(
+                f"❌ **خطأ في التحميل**\n{error_msg[:100]}",
+                chat_id=message.chat.id,
+                message_id=status_msg.message_id,
+                parse_mode='Markdown'
+            )
     
-    threading.Thread(target=process).start()
+    threading.Thread(target=process_download).start()
 
 if __name__ == "__main__":
-    print("✅ بوت اكرم يعمل على Render...")
+    print("✅ بوت اكرم يعمل الآن...")
     bot.infinity_polling()
