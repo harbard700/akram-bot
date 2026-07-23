@@ -7,12 +7,24 @@ import os
 import re
 import threading
 import time
-import shutil
+import requests
 
 # ============================================
-# 🔑 التوكن (ضع التوكن الخاص بك هنا)
+# 🔑 التوكن
 # ============================================
-TOKEN = "8778509203:AAEiqi4z2fvNYVB20QFsy3qGygT4oetbWwM"  # استبدله بتوكنك
+TOKEN = "8778509203:AAEiqi4z2fvNYVB20QFsy3qGygT4oetbWwM"
+
+# ============================================
+# 🚀 حذف الـ Webhook قبل أي شيء
+# ============================================
+try:
+    response = requests.get(f"https://api.telegram.org/bot{TOKEN}/deleteWebhook")
+    print(f"✅ Webhook deleted: {response.json()}")
+except Exception as e:
+    print(f"⚠️ Could not delete webhook: {e}")
+
+# انتظر 2 ثانية للتأكد من أن الخادم استجاب
+time.sleep(2)
 
 # ============================================
 # 🚀 تشغيل البوت
@@ -58,17 +70,14 @@ def send_welcome(message):
 def download_media(message):
     url = message.text.strip()
     
-    # التحقق من صحة الرابط
     if not re.match(r'^https?://', url):
         bot.reply_to(message, "❌ أرسل رابطاً صحيحاً يبدأ بـ http:// أو https://")
         return
     
-    # رسالة "جاري التحميل"
     status_msg = bot.reply_to(message, "⏳ جاري التحميل...")
     
     def process_download():
         try:
-            # إعدادات yt-dlp
             ydl_opts = {
                 'format': 'best[ext=mp4]/best[ext=jpg]/best[ext=png]/best',
                 'outtmpl': f'{DOWNLOAD_FOLDER}/%(title)s.%(ext)s',
@@ -83,7 +92,6 @@ def download_media(message):
                 info = ydl.extract_info(url, download=True)
                 file_path = ydl.prepare_filename(info)
                 
-                # إذا لم يتم العثور على الملف، حاول البحث عنه
                 if not os.path.exists(file_path):
                     files = os.listdir(DOWNLOAD_FOLDER)
                     if files:
@@ -91,13 +99,9 @@ def download_media(message):
                     else:
                         raise Exception("لم يتم العثور على الملف المحمل")
                 
-                # تحديد حجم الملف
                 file_size = os.path.getsize(file_path) / (1024 * 1024)
-                
-                # تحديد نوع الملف
                 ext = os.path.splitext(file_path)[1].lower()
                 
-                # إرسال الملف حسب نوعه
                 with open(file_path, 'rb') as f:
                     if ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']:
                         bot.send_photo(message.chat.id, f)
@@ -106,10 +110,8 @@ def download_media(message):
                     else:
                         bot.send_document(message.chat.id, f)
                 
-                # حذف الملف بعد الإرسال
                 os.remove(file_path)
                 
-                # تحديث رسالة النجاح
                 bot.edit_message_text(
                     f"✅ **تم التحميل بنجاح!**\n📁 {os.path.basename(file_path)}\n📦 {file_size:.2f} MB",
                     chat_id=message.chat.id,
@@ -129,7 +131,6 @@ def download_media(message):
                 parse_mode='Markdown'
             )
     
-    # تشغيل التحميل في خيط منفصل (لتجنب تجميد البوت)
     threading.Thread(target=process_download).start()
 
 # ============================================
@@ -140,4 +141,11 @@ if __name__ == "__main__":
     print("✅ بوت اكرم يعمل الآن...")
     print("📥 يدعم الفيديو والصور من جميع المواقع")
     print("=" * 50)
-    bot.infinity_polling()
+    
+    while True:
+        try:
+            bot.infinity_polling()
+        except Exception as e:
+            print(f"⚠️ Error: {e}")
+            print("🔄 Restarting in 5 seconds...")
+            time.sleep(5)
