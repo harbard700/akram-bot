@@ -9,9 +9,14 @@ import threading
 import time
 import requests
 
-TOKEN = "توكنك_الجديد"
+# ============================================
+# 🔑 التوكن الجديد
+# ============================================
+TOKEN = "8778509203:AAGgB5owopk1Sv2p_sIdHItLa6f6wByRIo8"
 
-# حذف Webhook
+# ============================================
+# 🚀 حذف الـ Webhook
+# ============================================
 try:
     requests.get(f"https://api.telegram.org/bot{TOKEN}/deleteWebhook")
 except:
@@ -22,11 +27,14 @@ time.sleep(1)
 bot = telebot.TeleBot(TOKEN)
 bot.remove_webhook()
 
+# ============================================
+# 📁 مجلد التحميل
+# ============================================
 DOWNLOAD_FOLDER = "downloads"
 os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
 
 # ============================================
-# 🎯 دالة استخراج رابط الصورة
+# 📥 دالة استخراج رابط الصورة من تيك توك
 # ============================================
 def get_tiktok_photo_url(url):
     api_url = f"https://www.tikwm.com/api/?url={url}"
@@ -63,20 +71,18 @@ def download_media(message):
 
     def process():
         try:
-            # 🔍 تحقق إذا كان الرابط لصورة تيك توك
+            # 🔍 التحقق من رابط صورة تيك توك
             if "tiktok.com" in url and "/photo/" in url:
                 photo_url = get_tiktok_photo_url(url)
                 if photo_url:
-                    # تحميل الصورة باستخدام requests
                     img_data = requests.get(photo_url).content
-                    with open(f"{DOWNLOAD_FOLDER}/tiktok_photo.jpg", 'wb') as f:
-                        f.write(img_data)
                     file_path = f"{DOWNLOAD_FOLDER}/tiktok_photo.jpg"
+                    with open(file_path, 'wb') as f:
+                        f.write(img_data)
                 else:
                     raise Exception("تعذر استخراج رابط الصورة")
-
             else:
-                # تحميل فيديو أو محتوى آخر باستخدام yt-dlp
+                # تحميل فيديو أو محتوى آخر
                 ydl_opts = {
                     'format': 'best[ext=mp4]/best',
                     'outtmpl': f'{DOWNLOAD_FOLDER}/%(title)s.%(ext)s',
