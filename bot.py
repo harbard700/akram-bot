@@ -19,8 +19,8 @@ except:
 
 time.sleep(1)
 
-# إنشاء البوت مع تمرير proxies كقاموس فارغ (لتجنب None)
-bot = telebot.TeleBot(TOKEN, proxies={})
+# ✅ إنشاء البوت بدون أي معاملات إضافية
+bot = telebot.TeleBot(TOKEN)
 
 DOWNLOAD_FOLDER = "downloads"
 os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
