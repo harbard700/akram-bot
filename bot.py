@@ -9,7 +9,7 @@ import threading
 import time
 import requests
 
-TOKEN = "8778509203:AAEiqi4z2fvNYVB20QFsy3qGygT4oetbWwM"
+TOKEN = "8778509203:AAHAg6rY68LgMBz7fFuIkRTEHhSJFZfCXD8"
 
 # حذف Webhook
 try:
