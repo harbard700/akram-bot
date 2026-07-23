@@ -15,7 +15,7 @@ import requests
 TOKEN = "8778509203:AAEiqi4z2fvNYVB20QFsy3qGygT4oetbWwM"
 
 # ============================================
-# 🚀 حذف الـ Webhook قبل أي شيء
+# 🚀 حذف الـ Webhook
 # ============================================
 try:
     response = requests.get(f"https://api.telegram.org/bot{TOKEN}/deleteWebhook")
@@ -23,17 +23,22 @@ try:
 except Exception as e:
     print(f"⚠️ Could not delete webhook: {e}")
 
-# انتظر 2 ثانية للتأكد من أن الخادم استجاب
 time.sleep(2)
 
 # ============================================
-# 🚀 تشغيل البوت
+# 🚀 تشغيل البوت (مع إعدادات افتراضية)
 # ============================================
-bot = telebot.TeleBot(TOKEN)
-bot.remove_webhook()  # إزالة أي Webhook سابق
+DEFAULT_API_URL = "https://api.telegram.org"
+DEFAULT_PROXIES = {}
+
+bot = telebot.TeleBot(
+    TOKEN,
+    api_url=DEFAULT_API_URL,
+    proxies=DEFAULT_PROXIES
+)
 
 # ============================================
-# 📁 مجلد التحميل المؤقت
+# 📁 مجلد التحميل
 # ============================================
 DOWNLOAD_FOLDER = "downloads"
 os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
@@ -64,14 +69,14 @@ def send_welcome(message):
     bot.reply_to(message, welcome_text, parse_mode='Markdown')
 
 # ============================================
-# 📥 دالة التحميل الأساسية
+# 📥 دالة التحميل
 # ============================================
 @bot.message_handler(func=lambda message: True)
 def download_media(message):
     url = message.text.strip()
     
     if not re.match(r'^https?://', url):
-        bot.reply_to(message, "❌ أرسل رابطاً صحيحاً يبدأ بـ http:// أو https://")
+        bot.reply_to(message, "❌ أرسل رابطاً صحيحاً")
         return
     
     status_msg = bot.reply_to(message, "⏳ جاري التحميل...")
@@ -97,7 +102,7 @@ def download_media(message):
                     if files:
                         file_path = os.path.join(DOWNLOAD_FOLDER, files[0])
                     else:
-                        raise Exception("لم يتم العثور على الملف المحمل")
+                        raise Exception("لم يتم العثور على الملف")
                 
                 file_size = os.path.getsize(file_path) / (1024 * 1024)
                 ext = os.path.splitext(file_path)[1].lower()
@@ -113,19 +118,19 @@ def download_media(message):
                 os.remove(file_path)
                 
                 bot.edit_message_text(
-                    f"✅ **تم التحميل بنجاح!**\n📁 {os.path.basename(file_path)}\n📦 {file_size:.2f} MB",
+                    f"✅ **تم التحميل!**\n📁 {os.path.basename(file_path)}\n📦 {file_size:.2f} MB",
                     chat_id=message.chat.id,
                     message_id=status_msg.message_id,
                     parse_mode='Markdown'
                 )
                 
-                print(f"✅ تم تحميل وإرسال: {os.path.basename(file_path)}")
+                print(f"✅ تم تحميل: {os.path.basename(file_path)}")
                 
         except Exception as e:
             error_msg = str(e)
             print(f"❌ خطأ: {error_msg}")
             bot.edit_message_text(
-                f"❌ **حدث خطأ أثناء التحميل**\n\n📌 {error_msg[:150]}...",
+                f"❌ **خطأ في التحميل**\n{error_msg[:150]}",
                 chat_id=message.chat.id,
                 message_id=status_msg.message_id,
                 parse_mode='Markdown'
